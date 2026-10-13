@@ -1,0 +1,17 @@
+# Python
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+
+# Project outputs
+results/
+report.json
+report.md
+quarantine.new.json
+
+# Vercel / env / OS
+.vercel/
+.env*
+.DS_Store
