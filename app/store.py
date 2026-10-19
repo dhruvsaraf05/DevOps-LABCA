@@ -8,6 +8,15 @@ On Vercel (serverless) this state does not persist across requests.
 _notes: dict[int, dict] = {}
 _next_id = 1
 
+# Name of the last simulated operation (see app/external.py). Process-wide state that
+# reset() deliberately does NOT clear; the order-dependent flaky test relies on it.
+last_operation: str | None = None
+
+
+def record_operation(name: str) -> None:
+    global last_operation
+    last_operation = name
+
 
 def create(title: str, content: str) -> dict:
     global _next_id
