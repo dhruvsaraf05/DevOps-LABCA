@@ -21,6 +21,7 @@ FROM base AS test
 RUN python -c "import tomllib; print('\n'.join(tomllib.load(open('pyproject.toml','rb'))['project']['optional-dependencies']['dev']))" > requirements-dev.txt \
     && pip install -r requirements-dev.txt
 COPY tests/ tests/
+COPY quarantine.json .
 CMD ["python", "-m", "pytest"]
 
 # ---- runtime: no dev dependencies, runs as a non-root user ----

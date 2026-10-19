@@ -99,6 +99,8 @@ jobs:
     needs: test-matrix
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    outputs:
+      newly_quarantined: ${{ steps.detect.outputs.newly_quarantined }}
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-python@v7
@@ -121,6 +123,10 @@ jobs:
             --write-quarantine quarantine.new.json \
             --commit "${{ github.sha }}" || code=$?
           echo "exit_code=$code" >> "$GITHUB_OUTPUT"
+          if [ -f report.json ]; then
+            n=$(python -c "import json; print(json.load(open('report.json'))['summary']['newly_quarantined'])")
+            echo "newly_quarantined=$n" >> "$GITHUB_OUTPUT"
+          fi
       - name: Publish report to job summary
         if: always()
         run: '[ ! -f report.md ] || cat report.md >> "$GITHUB_STEP_SUMMARY"'
@@ -138,3 +144,33 @@ jobs:
         run: |
           echo "::error::Gate failed (detector exit code ${{ steps.detect.outputs.exit_code }}). See the report in the job summary."
           exit "${{ steps.detect.outputs.exit_code }}"
+
+  # 5. Persist the quarantine: open (or update) a PR that adds newly flaky tests to
+  #    quarantine.json. Only on main, only when the detector found new flaky tests.
+  quarantine-pr:
+    needs: analyze
+    if: >-
+      github.event_name == 'push' && github.ref == 'refs/heads/main' &&
+      needs.analyze.outputs.newly_quarantined != '' &&
+      needs.analyze.outputs.newly_quarantined != '0'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/download-artifact@v8
+        with:
+          name: flaky-report
+          path: flaky-report
+      - name: Replace quarantine.json with the updated list
+        run: cp flaky-report/quarantine.new.json quarantine.json
+      - uses: peter-evans/create-pull-request@v8
+        with:
+          branch: bot/quarantine
+          title: "chore: quarantine ${{ needs.analyze.outputs.newly_quarantined }} flaky test(s)"
+          commit-message: "chore: quarantine ${{ needs.analyze.outputs.newly_quarantined }} flaky test(s)"
+          body-path: flaky-report/report.md
+          add-paths: quarantine.json
+          delete-branch: true
