@@ -1,0 +1,14 @@
+.git
+.github
+.venv
+.vercel
+__pycache__
+*.pyc
+.pytest_cache
+.ruff_cache
+results
+report.json
+report.md
+quarantine.new.json
+docs
+.env*
