@@ -12,3 +12,4 @@ report.md
 quarantine.new.json
 docs
 .env*
+*.egg-info
