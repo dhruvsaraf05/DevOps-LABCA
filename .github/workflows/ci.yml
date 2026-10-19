@@ -1,0 +1,140 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# A newer push to the same ref cancels the run still in progress for it.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  FLAKE_RATE: "0.3"
+  TEST_IMAGE: flaky-ci-test:ci
+
+jobs:
+  # 1. Cheap checks first: lint the code and unit-test the detector itself.
+  lint:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: pyproject.toml
+      - name: Install dev dependencies
+        run: pip install -e ".[dev]"
+      - name: Ruff
+        run: ruff check .
+      - name: Detector unit tests
+        run: pytest tools/ -q
+
+  # 2. Build the test image once; every matrix job reuses it.
+  build-test-image:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: docker/setup-buildx-action@v4
+      - name: Build test image
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          target: test
+          load: true
+          tags: ${{ env.TEST_IMAGE }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      - name: Save image
+        run: docker save "$TEST_IMAGE" | gzip > test-image.tar.gz
+      - uses: actions/upload-artifact@v7
+        with:
+          name: test-image
+          path: test-image.tar.gz
+          retention-days: 1
+          compression-level: 0 # already gzipped
+
+  # 3. Run the whole suite 10 times in parallel, each in its own container.
+  test-matrix:
+    needs: build-test-image
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        run: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          name: test-image
+      - name: Load image
+        run: docker load -i test-image.tar.gz
+      - name: Run pytest (random order, quarantine ignored)
+        # A failing test is data, not a job failure: the analyze job decides the verdict.
+        continue-on-error: true
+        run: |
+          mkdir results
+          docker run --rm \
+            -e IGNORE_QUARANTINE=1 \
+            -e FLAKE_RATE="$FLAKE_RATE" \
+            -v "$PWD/results:/out" \
+            "$TEST_IMAGE" \
+            python -m pytest --junitxml=/out/junit-${{ matrix.run }}.xml
+      - uses: actions/upload-artifact@v7
+        with:
+          name: junit-${{ matrix.run }}
+          path: results/junit-${{ matrix.run }}.xml
+          if-no-files-found: error # pytest crashed before writing XML: fail loudly
+
+  # 4. Classify every test and apply the gate. Fails only if a non-quarantined test is broken.
+  analyze:
+    needs: test-matrix
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: junit-*
+          merge-multiple: true
+          path: results
+      - name: Run detector
+        id: detect
+        run: |
+          code=0
+          python tools/flaky_detector.py \
+            --results results/ \
+            --quarantine quarantine.json \
+            --out-json report.json \
+            --out-md report.md \
+            --write-quarantine quarantine.new.json \
+            --commit "${{ github.sha }}" || code=$?
+          echo "exit_code=$code" >> "$GITHUB_OUTPUT"
+      - name: Publish report to job summary
+        if: always()
+        run: '[ ! -f report.md ] || cat report.md >> "$GITHUB_STEP_SUMMARY"'
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: flaky-report
+          path: |
+            report.json
+            report.md
+            quarantine.new.json
+          if-no-files-found: warn
+      - name: Enforce gate
+        if: steps.detect.outputs.exit_code != '0'
+        run: |
+          echo "::error::Gate failed (detector exit code ${{ steps.detect.outputs.exit_code }}). See the report in the job summary."
+          exit "${{ steps.detect.outputs.exit_code }}"

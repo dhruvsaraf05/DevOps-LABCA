@@ -1,0 +1,25 @@
+name: Naive CI (demo "before")
+
+# Runs the tests once with no detector and no quarantine. Trigger it a few times from the
+# Actions tab: identical code goes red/green at random because of the flaky tests.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: pyproject.toml
+      - name: Install dependencies
+        run: pip install -e ".[dev]"
+      - name: Run tests once
+        run: pytest
