@@ -5,7 +5,7 @@ from pydantic import BaseModel, Field
 
 from app import _version, store
 
-app = FastAPI(title="Notes API")
+app = FastAPI(title="Notes API", description="Tiny Notes API released by the flaky-test pipeline")
 
 
 class NoteIn(BaseModel):
