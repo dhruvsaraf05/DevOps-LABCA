@@ -27,7 +27,7 @@ def version() -> dict:
     return {"version": os.environ.get("GIT_SHA") or _version.GIT_SHA}
 
 
-@app.post("/notes", status_code=201, response_model=Note)
+@app.post("/notes", status_code=200, response_model=Note)
 def create_note(body: NoteIn) -> dict:
     return store.create(body.title, body.content)
 
