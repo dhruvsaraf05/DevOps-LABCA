@@ -230,21 +230,14 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: "22"
-      - uses: actions/setup-python@v7
-        with:
-          python-version: "3.12"
-      - name: Install uv (vercel build uses it for Python projects)
-        run: pip install uv
       - name: Bake the commit SHA into app/_version.py
         run: printf 'GIT_SHA = "%s"\n' "$GITHUB_SHA" > app/_version.py
       - name: Install Vercel CLI
         run: npm i -g vercel@64
-      - name: Pull Vercel project settings
-        run: vercel pull --yes --environment=production --token="$VERCEL_TOKEN"
-      - name: Build
-        run: vercel build --prod --token="$VERCEL_TOKEN"
-      - name: Deploy
-        run: vercel deploy --prebuilt --prod --token="$VERCEL_TOKEN"
+      # Vercel builds remotely (plain deploy). The --prebuilt route bundled FastAPI's native
+      # dependencies built on the runner and crashed at import time on Vercel (PLAN fallback).
+      - name: Deploy to production
+        run: vercel deploy --prod --yes --token="$VERCEL_TOKEN"
 
   # 8. Prove the right commit is live. Single-request checks only: serverless instances do
   #    not share memory, so we never create a note and read it back (PLAN section 4.7).

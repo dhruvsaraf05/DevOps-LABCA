@@ -18,3 +18,8 @@ quarantine.new.json
 
 # Build artifacts
 *.egg-info/
+
+# Local tooling output (vercel/uv/setuptools)
+build/
+uv.lock
+.python-version
