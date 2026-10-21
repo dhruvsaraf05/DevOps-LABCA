@@ -23,3 +23,6 @@ quarantine.new.json
 build/
 uv.lock
 .python-version
+
+# Keep the submission report (the report.md pattern above also matches it on Windows)
+!docs/REPORT.md
