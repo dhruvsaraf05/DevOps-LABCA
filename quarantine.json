@@ -24,6 +24,14 @@
       "detected_at": "2026-10-19T23:12:58Z",
       "commit": "ebcf46cbf8305d7103b38d1931eb3b7be0e5a316",
       "reason": "mixed results across repeated runs"
+    },
+    {
+      "id": "tests/test_flaky.py::test_flaky_demo_new_test",
+      "flake_rate": 0.3,
+      "runs": 10,
+      "detected_at": "2026-10-21T18:44:27Z",
+      "commit": "13f37e82afeba8a0a622eebd7257d967261889bd",
+      "reason": "mixed results across repeated runs"
     }
   ]
 }
