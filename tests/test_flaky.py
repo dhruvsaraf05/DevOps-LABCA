@@ -5,6 +5,7 @@ represents a common real-world category of flaky test. FLAKE_RATE (default 0.3) 
 """
 
 import os
+import random
 import time
 
 from app import external, store
@@ -26,6 +27,12 @@ def test_flaky_timing():
     start = time.perf_counter()
     external.timed_lookup(flake_rate())
     assert time.perf_counter() - start < 0.1
+
+
+def test_flaky_demo_new_test():
+    """INTENTIONALLY FLAKY (demo scenario B): a newly added test that depends on an
+    unseeded random draw and fails with probability FLAKE_RATE."""
+    assert random.SystemRandom().random() >= flake_rate()
 
 
 def test_flaky_order_dependent():
