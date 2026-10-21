@@ -230,6 +230,11 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: "22"
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - name: Install uv (vercel build uses it for Python projects)
+        run: pip install uv
       - name: Bake the commit SHA into app/_version.py
         run: printf 'GIT_SHA = "%s"\n' "$GITHUB_SHA" > app/_version.py
       - name: Install Vercel CLI
