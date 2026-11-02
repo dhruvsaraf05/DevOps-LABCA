@@ -7,9 +7,7 @@
 | Course | DevOps (216U01E744), Semester VII |
 | Activity | LAB CA Activity 2: Mini project |
 | Institution | KJSCE |
-| Team members and roll numbers | [fill in] |
-| Faculty | [fill in] |
-| Submission date | [fill in] |
+| Team members and roll numbers | Dhruv Saraf (16010123111), Smit Zawar (16010123063), Shashwat Shukla (16010123829) |
 | Repository | <https://github.com/dhruvsaraf05/DevOps-LABCA> |
 | Live application | <https://quarantine-flaky-ci.vercel.app> |
 
@@ -266,8 +264,12 @@ After the merge, the pipeline opened the PR "chore: quarantine 1 flaky test(s)",
 test to `quarantine.json`. Once it was merged, the next run listed all four tests as already
 quarantined and opened no new PR.
 
+The second image is the same report table as the job summary, taken from the body of the bot PR.
+The bot PR reports the later run on `main`, so the counts of the older flaky tests differ slightly
+from the PR 2 run above. That is the expected spread of random failures.
+
 ![Matrix and summary](screenshots/B-pr2-matrix-and-summary.png)
-![Job summary flaky table](screenshots/B-job-summary-flaky-table.png)
+![Flaky test report table (shown in the bot PR body)](screenshots/B-job-summary-flaky-table.png)
 ![Bot quarantine PR](screenshots/B-bot-quarantine-pr.png)
 
 ### 8.3 Before: no detector (scenario A)
@@ -301,6 +303,11 @@ A harmless change (API description text) was merged through a pull request. All 
 `lint`, `build-test-image`, ten `test-matrix` jobs, `analyze`, `build-push`, `deploy` and
 `smoke-test`. The live `/version` returned the commit SHA of that merge, and GHCR had the image
 tagged with the same SHA and `latest`.
+
+The Vercel deployments page lists one Production deployment per commit on `main`. The project is
+not connected to the Git repository: the branch and commit shown come from the checkout that the
+Vercel CLI ran in during the `deploy` job. Failed attempts from the setup (section 7.8) also
+appear in the full list, such as the Error row at the bottom.
 
 ![Release chain](screenshots/D-release-chain-green.png)
 ![Live version](screenshots/D-live-version.png)
